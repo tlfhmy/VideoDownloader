@@ -1,10 +1,8 @@
 import sys
-import MainWindowUI
+import DownloaderWidget
 from PyQt5.QtWidgets import QApplication, QMainWindow
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    mainWindow = QMainWindow()
-    ui = MainWindowUI.Ui_MainWindow()
-    ui.setupUi(mainWindow)
+    mainWindow = DownloaderWidget.DownloaderWidget()
     mainWindow.show()
     sys.exit(app.exec_())

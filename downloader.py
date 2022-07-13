@@ -19,6 +19,36 @@ def flatten_list(inlst:list) -> list:
             res.append(ele)
     return res
 
+class VideoInfo(object):
+    def __init__(self, video_info_dict: dict):
+        self.title = ""
+        self.flag = ""
+        self.quality = ""
+        self.size = ""
+        self.container = ""
+        self.src = []
+        self.extrac_infor(video_info_dict)
+
+    def extrac_infor(self, video_info_dict):
+        self.title = video_info_dict['title']
+        self.flag = video_info_dict['flag']
+        self.quality = video_info_dict['quality']
+        self.size = video_info_dict['size']
+        self.src = video_info_dict['src']
+        self.container = video_info_dict['container']
+
+    def __str__(self):
+        res = ""
+        res += f"视频标题：{self.title}\n"
+        res += f"视频标识：{self.flag}\n"
+        res += f"视频格式：{self.container}\n"
+        res += f"视频质量：{self.quality}\n"
+        res += f"视频大小：{self.size}\n"
+        return res
+
+    def __repr__(self):
+        return self.__str__()
+
 
 
 class YouGet(object):
@@ -38,33 +68,30 @@ class YouGet(object):
         res = json.loads(res)
 
         title = res['title']
-        print("--标题--", title)
 
         streams = res['streams']
 
-        for k, v in streams.items():
-            video_flg = k
-            video_format = v['container']
-            video_quality = v['quality']
-            if "size" in v:
-                video_size = int(v['size']) / 1024 / 1024
-            else:
-                video_size = None
-            if "src" in v:
-                video_src = flatten_list(v['src'])
-            else:
-                video_src = []
-            print("视频标识：", video_flg)
-            print("视频格式：", video_format)
-            print("视频质量：", video_quality)
-            print("视频大小：", video_size)
-            print("视频路径：", video_src)
+        res = []
 
-            print("--"*10)
+        for k, v in streams.items():
+            try:
+                video_info_dict = {}
+                video_info_dict['title'] = title
+                video_info_dict['flag'] = k
+                video_info_dict['container'] = v['container']
+                video_info_dict['quality'] = v['quality']
+                video_info_dict['size'] = '%5.2fMB'%(int(v['size']) / 1024 / 1024)
+                video_info_dict['src'] = flatten_list(v['src'])
+
+                res.append(VideoInfo(video_info_dict))
+
+            except:
+                pass
 
         return res
 
 if __name__ == '__main__':
     YouGet = YouGet("./")
     YouGet.set_url("https://www.youtube.com/watch?v=XyTcINLKq4c")
-    YouGet.format_list()
+    for ele in YouGet.format_list():
+        print(ele)
