@@ -1,8 +1,29 @@
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtWidgets import QFileDialog, QMessageBox
+from PyQt5.Qt import QThread, QMutex, pyqtSignal, pyqtSlot
 import downloader
 import json
-import os
+import os, time
+
+class ResolveURL_Thread(QThread):
+    completeSignal = pyqtSignal(list)
+    
+    def __init__(self, you_get_downloader):
+        super(ResolveURL_Thread, self).__init__()
+        self.you_get_downloader = you_get_downloader
+
+    def run(self):
+        res = self.you_get_downloader.format_list()
+        self.completeSignal.emit(res)
+
+class Download_Thread(QThread):
+    completeSignal = pyqtSignal()
+
+    def __init__(self):
+        super(Download_Thread, self).__init__()
+
+    def run(self):
+        pass
 
 class DownloaderWidget(QtWidgets.QMainWindow):
     def __init__(self):
@@ -120,15 +141,30 @@ class DownloaderWidget(QtWidgets.QMainWindow):
                                         QMessageBox.Yes)
                 return
 
-        self.youGetDownloader = downloader.YouGet(savePath)
+        if self.proxy_CheckBox.checkState():
+            self.youGetDownloader = downloader.YouGet(savePath, self.spinBox.value())
+        else:
+            self.youGetDownloader = downloader.YouGet(savePath)
         self.youGetDownloader.set_url(url)
 
+        self.resolve_Button.setEnabled(False)
+        self.resolveWorker = ResolveURL_Thread(self.youGetDownloader)
+        self.resolveWorker.completeSignal.connect(self.getVideoSourceList)
+        self.resolveWorker.start()
+
+
+
+    @pyqtSlot(list)
+    def getVideoSourceList(self, res):
         self.video_sources_dicr = {}
-        for i, ele in enumerate(self.youGetDownloader.format_list()):
-            self.video_sources_dicr[f'视频源{i+1}: {ele.quality}'] = ele
+        for i, ele in enumerate(res):
+            self.video_sources_dicr[f'视频源{i + 1}: {ele.quality}'] = ele
 
         for k in self.video_sources_dicr.keys():
             self.source_Box.addItem(k)
+
+        self.resolve_Button.setEnabled(True)
+
 
     def select_source(self):
         self.info_Browser.clear()
@@ -142,6 +178,8 @@ class DownloaderWidget(QtWidgets.QMainWindow):
         dict = {'paths':[]}
         for ele in self.historyPaths:
             dict['paths'].append(ele)
+        dict['proxy_enable'] = self.proxy_CheckBox.checkState()
+        dict['proxy_port'] = self.spinBox.value()
 
         cont = json.dumps(dict, indent=2)
         with open('./history.ini', 'w') as f:
@@ -159,12 +197,14 @@ class DownloaderWidget(QtWidgets.QMainWindow):
                 for path in his_paths['paths']:
                     self.save_Box.addItem(path)
                     self.historyPaths.add(path)
+                if 'proxy_enable' in his_paths:
+                    self.proxy_CheckBox.setCheckState(his_paths['proxy_enable'])
+                    self.spinBox.setValue(his_paths['proxy_port'])
+                    self.spinBox.setReadOnly(not self.proxy_CheckBox.checkState())
             except:
                 QMessageBox.warning(self, '历史文件内容错误！',
                                     'history.ini文件存在问题, 将清空并覆写历史文件！',
                                     QMessageBox.Yes)
-
-
 
     def setSlots(self):
         self.save_Button.clicked.connect(self.openPath)

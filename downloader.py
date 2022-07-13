@@ -1,7 +1,7 @@
 import os
 import sys
 import json
-import you_get
+from subprocess import Popen
 
 def flatten_list(inlst:list) -> list:
     res = []
@@ -52,10 +52,14 @@ class VideoInfo(object):
 
 
 class YouGet(object):
-    def __init__(self, Savepath):
+    def __init__(self, Savepath, proxy_port=None):
         self.Savepath = Savepath
         self.url = None
-        self.format_list_cmd = "you-get --json {} -s 127.0.0.1:1090"
+        self.proxy_port = proxy_port
+        if proxy_port is not None:
+            self.format_list_cmd = "you-get --json {}"  + f" -s 127.0.0.1:{proxy_port}"
+        else:
+            self.format_list_cmd = "you-get --json {}"
         self.format_choose = None
 
     def set_url(self, url):
@@ -90,8 +94,28 @@ class YouGet(object):
 
         return res
 
+    def download(self, itag):
+        if self.proxy_port is not None:
+            sys.argv = ['you-get', f'--itag={itag}',
+                        f'-s 127.0.0.1:{self.proxy_port}',
+                        '-o',
+                        self.Savepath,
+                        f"'{self.url}'",
+                        '--debug']
+        else:
+            sys.argv = ['you-get', f'--itag={itag}',
+                        '-o',
+                        self.Savepath,
+                        f"'{self.url}'",
+                        '--debug']
+
+        cmd = " ".join(sys.argv)
+        proc = os.popen(cmd)
+        return proc
+
 if __name__ == '__main__':
-    YouGet = YouGet("./")
+    YouGet = YouGet("./", 1090)
     YouGet.set_url("https://www.youtube.com/watch?v=XyTcINLKq4c")
-    for ele in YouGet.format_list():
-        print(ele)
+    # for ele in YouGet.format_list():
+    #     print(ele)
+    YouGet.download(137)
