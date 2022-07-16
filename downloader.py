@@ -1,7 +1,6 @@
 import os
-import sys
 import json
-from subprocess import Popen
+from subprocess import Popen, PIPE
 
 def flatten_list(inlst:list) -> list:
     res = []
@@ -38,8 +37,7 @@ class VideoInfo(object):
         self.container = video_info_dict['container']
 
     def __str__(self):
-        res = ""
-        res += f"视频标题：{self.title}\n"
+        res = f"视频标题：{self.title}\n"
         res += f"视频标识：{self.flag}\n"
         res += f"视频格式：{self.container}\n"
         res += f"视频质量：{self.quality}\n"
@@ -96,21 +94,19 @@ class YouGet(object):
 
     def download(self, itag):
         if self.proxy_port is not None:
-            sys.argv = ['you-get', f'--itag={itag}',
+            args = ['you-get', f'--itag={itag}',
                         f'-s 127.0.0.1:{self.proxy_port}',
                         '-o',
                         self.Savepath,
-                        f"'{self.url}'",
-                        '--debug']
+                        f"'{self.url}'"]
         else:
-            sys.argv = ['you-get', f'--itag={itag}',
+            args = ['you-get', f'--itag={itag}',
                         '-o',
                         self.Savepath,
-                        f"'{self.url}'",
-                        '--debug']
+                        f"'{self.url}'"]
 
-        cmd = " ".join(sys.argv)
-        proc = os.popen(cmd)
+        cmd = " ".join(args)
+        proc = Popen(cmd, shell=True, stdout=PIPE)
         return proc
 
 if __name__ == '__main__':
@@ -118,4 +114,14 @@ if __name__ == '__main__':
     YouGet.set_url("https://www.youtube.com/watch?v=XyTcINLKq4c")
     # for ele in YouGet.format_list():
     #     print(ele)
-    YouGet.download(137)
+    pr  = YouGet.download(137)
+    tmp_line = bytearray()
+    while pr.poll() is None:
+        a = pr.stdout.read(1)
+        if a in [b'\r', b'\n']:
+            tmp_line.extend(a)
+            res = tmp_line.decode('utf-8')
+            print(res.strip())
+            tmp_line = bytearray()
+        else:
+            tmp_line.extend(a)

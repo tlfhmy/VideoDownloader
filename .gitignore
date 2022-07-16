@@ -1,3 +1,4 @@
 ./test.json
 *.srt
 *.mp4
+*.download
